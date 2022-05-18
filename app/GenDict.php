@@ -8,9 +8,56 @@ class GenDict
 {
     private $pdo;
 
+    private $column_info;
+
+    private $table_info;
+
+    private $table_header_md;
+
+    private $column_header_md;
+
     public function __construct()
     {
         $this->pdo = $this->build_pdo();
+        $this->column_info = $this->column_info();
+        $this->table_info = $this->table_info();
+        $this->table_header_md = $this->generate_table_info_table_header_md();
+        $this->column_header_md = $this->generate_column_info_table_header_md();
+    }
+
+    /**
+     * 生成表信息markdown表头
+     * @return string
+     */
+    public function generate_column_info_table_header_md(): string
+    {
+        $column_info = $this->column_info();
+        $comment = array_values($column_info);
+        $md = PHP_EOL . '| ' . implode(' | ', $comment) . ' |';
+        $md .= PHP_EOL;
+        foreach ($column_info as $key => $value) {
+            if ($key != 'is_nullable') {
+                $md .= '| --- ';
+            } else {
+                // 居中
+                $md .= '|:---:';
+            }
+        }
+        $md .= '|';
+        return $md;
+    }
+
+    /**
+     * 生成表字段markdown表头
+     * @return string
+     */
+    public function generate_table_info_table_header_md(): string
+    {
+        $table_info = $this->table_info();
+        $comment = array_values($table_info);
+        $md = PHP_EOL . '| ' . implode(' | ', $comment) . ' |';
+        $md .= PHP_EOL . str_repeat('| --- ', count($table_info)) . '|';
+        return $md;
     }
 
     public function connect_config(): array
@@ -21,6 +68,29 @@ class GenDict
             'USER' => 'root',
             'PASSWORD' => '',
             'CHARSET' => 'utf8mb4'
+        ];
+    }
+
+    private function table_info(): array
+    {
+        return [
+            'table_name' => '表名',
+            'table_comment' => '注释',
+            'table_collation' => '编码',
+            'engine' => '数据库引擎',
+            'create_time' => '创建时间',
+        ];
+    }
+
+    private function column_info(): array
+    {
+        return [
+            'column_name' => '字段名',
+            'column_type' => '字段类型',
+            'column_comment' => '注释',
+            'column_default' => '默认值',
+            'extra' => '附加值',
+            'is_nullable' => '是否允许空值',
         ];
     }
 
@@ -48,14 +118,7 @@ class GenDict
      */
     public function column_info_column(): string
     {
-        $columns = [
-            'column_name',
-            'column_type',
-            'is_nullable',
-            'extra',
-            'column_default',
-            'column_default'
-        ];
+        $columns = array_keys($this->column_info);
         return implode(',', $columns);
     }
 
@@ -65,17 +128,8 @@ class GenDict
      */
     public function table_info_column(): string
     {
-        $columns = [
-            'table_name',
-            'engine',
-            'table_rows',
-            'data_length',
-            'auto_increment',
-            'create_time',
-            'table_collation',
-            'table_comment',
-        ];
-        return implode(',', $columns);
+        $table_columns = array_keys($this->table_info);
+        return implode(',', $table_columns);
     }
 
     /**
@@ -138,15 +192,52 @@ class GenDict
         return array_merge($table_info[0], ['column_infos' => $column_info]);
     }
 
-
-    public function generate()
+    public function table_infos(): array
     {
         $tables = $this->fetch_tables();
         $table_infos = [];
         foreach ($tables as $table_name) {
             $table_infos[] = $this->merge_info($table_name);
         }
-        var_export($table_infos);
+        return $table_infos;
+    }
+
+    public function write_table_infos_to_file()
+    {
+        $filename = $this->connect_config()['DB_NAME'] . '_schema.json';
+        $table_infos = $this->table_infos();
+        $json = json_encode($table_infos, JSON_UNESCAPED_UNICODE);
+        file_put_contents($filename, $json);
+    }
+
+    public function generate()
+    {
+        $this->write_table_infos_to_file();
+    }
+
+    /**
+     * 生成数据源markdown文档
+     * @return void
+     */
+    public function generate_md()
+    {
+        $filename = $this->connect_config()['DB_NAME'] . '_schema.json';
+        $json = file_get_contents($filename);
+        $table_infos = json_decode($json);
+        $md = '### ' . $this->connect_config()['DB_NAME'] . '数据库字典';
+        foreach ($table_infos as $table_info) {
+            $md .= PHP_EOL . $this->table_header_md;
+            $table_row = sprintf('| %s | %s | %s | %s | %s |', $table_info->table_name, $table_info->table_comment, $table_info->table_collation, $table_info->engine, $table_info->create_time);
+            $md .= PHP_EOL . $table_row . PHP_EOL;
+            $md .= $this->column_header_md;
+            foreach ($table_info->column_infos as $column_info) {
+                $str = sprintf('| %s | %s | %s | %s | %s | %s |', $column_info->column_name, $column_info->column_type, $column_info->column_comment, $column_info->column_default, $column_info->extra, $column_info->is_nullable);
+                $md .= PHP_EOL . $str;
+            };
+            $md .= PHP_EOL . '*****';
+        }
+        $md_file_name = $this->connect_config()['DB_NAME'] . '.md';
+        file_put_contents($md_file_name, $md);
     }
 
 }

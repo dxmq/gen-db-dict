@@ -5,4 +5,4 @@ require_once dirname(__FILE__)."/vendor/autoload.php";
 use App\GenDict;
 
 $dict = new GenDict();
-$dict->generate();
+$dict->generate_md();
