@@ -6,7 +6,15 @@ use PDO;
 
 class GenDict
 {
-    public function connect_config(): array {
+    private $pdo;
+
+    public function __construct()
+    {
+        $this->pdo = $this->build_pdo();
+    }
+
+    public function connect_config(): array
+    {
         return [
             'HOST_NAME' => '',
             'DB_NAME' => '',
@@ -16,7 +24,7 @@ class GenDict
         ];
     }
 
-    public function pdo(): PDO
+    public function build_pdo(): PDO
     {
         $config = $this->connect_config();
         $host = $config['HOST_NAME'];
@@ -34,37 +42,53 @@ class GenDict
     }
 
 
-    public function column_info_column(): string {
+    /**
+     * 表字段信息field
+     * @return string
+     */
+    public function column_info_column(): string
+    {
         $columns = [
-            'COLUMN_NAME',
-            'COLUMN_TYPE',
-            'IS_NULLABLE',
-            'EXTRA',
-            'COLUMN_DEFAULT',
-            'COLUMN_COMMENT'
+            'column_name',
+            'column_type',
+            'is_nullable',
+            'extra',
+            'column_default',
+            'column_default'
         ];
         return implode(',', $columns);
     }
 
-    public function table_info_column(): string {
+    /**
+     * 表信息field
+     * @return string
+     */
+    public function table_info_column(): string
+    {
         $columns = [
-            'TABLE_NAME',
-            'ENGINE',
-            'TABLE_ROWS',
-            'DATA_LENGTH',
-            'AUTO_INCREMENT',
-            'CREATE_TIME',
-            'TABLE_COLLATION',
-            'TABLE_COMMENT',
+            'table_name',
+            'engine',
+            'table_rows',
+            'data_length',
+            'auto_increment',
+            'create_time',
+            'table_collation',
+            'table_comment',
         ];
         return implode(',', $columns);
     }
 
-    public function query_column_info(PDO $pdo, string $table_name): array {
+    /**
+     * 查询表字段信息
+     * @param string $table_name
+     * @return array
+     */
+    public function fetch_column_info(string $table_name): array
+    {
         $statement = 'select ' . $this->column_info_column();
         $statement .= ' from INFORMATION_SCHEMA.COLUMNS';
         $statement .= ' where table_schema = ? and table_name = ?';
-        $stmt = $pdo->prepare($statement);
+        $stmt = $this->pdo->prepare($statement);
         $param = [
             $this->connect_config()['DB_NAME'],
             $table_name
@@ -73,11 +97,17 @@ class GenDict
         return $stmt->fetchAll();
     }
 
-    public function query_table_info(PDO $pdo, string $table_name) {
+    /**
+     * 查询表信息
+     * @param string $table_name
+     * @return array
+     */
+    public function fetch_table_info(string $table_name): array
+    {
         $statement = 'select ' . $this->table_info_column();
         $statement .= ' from INFORMATION_SCHEMA.TABLES';
         $statement .= ' where table_schema = ? and table_name = ?';
-        $stmt = $pdo->prepare($statement);
+        $stmt = $this->pdo->prepare($statement);
         $param = [
             $this->connect_config()['DB_NAME'],
             $table_name
@@ -86,16 +116,37 @@ class GenDict
         return $stmt->fetchAll();
     }
 
+    /**
+     * 查询数据所有的表
+     * @return array
+     */
+    public function fetch_tables(): array
+    {
+        $stmt = $this->pdo->query('show tables');
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
 
-    public function generate() {
-        $pdo = $this->pdo();
-        $stmt = $pdo->query('show tables');
-        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    /**
+     * 合并表信息与表字段信息
+     * @param $table_name
+     * @return array
+     */
+    public function merge_info($table_name): array
+    {
+        $table_info = $this->fetch_table_info($table_name);
+        $column_info = $this->fetch_column_info($table_name);
+        return array_merge($table_info[0], ['column_infos' => $column_info]);
+    }
 
-        foreach ($tables as $table) {
 
-            var_export($table);
+    public function generate()
+    {
+        $tables = $this->fetch_tables();
+        $table_infos = [];
+        foreach ($tables as $table_name) {
+            $table_infos[] = $this->merge_info($table_name);
         }
+        var_export($table_infos);
     }
 
 }
