@@ -63,10 +63,10 @@ class GenDict
     public function connect_config(): array
     {
         return [
-            'HOST_NAME' => '',
-            'DB_NAME' => '',
+            'HOST_NAME' => '114.115.232.151',
+            'DB_NAME' => 'base',
             'USER' => 'root',
-            'PASSWORD' => '',
+            'PASSWORD' => 'TenPoint@246866',
             'CHARSET' => 'utf8mb4'
         ];
     }
@@ -177,7 +177,7 @@ class GenDict
     public function fetch_tables(): array
     {
         $stmt = $this->pdo->query('show tables');
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN );
     }
 
     /**
@@ -199,7 +199,17 @@ class GenDict
         foreach ($tables as $table_name) {
             $table_infos[] = $this->merge_info($table_name);
         }
-        return $table_infos;
+
+        $res = [];
+        foreach ($table_infos as $table_info) {
+            if (strpos($table_info['table_name'], '_') !== false) {
+                $explode = explode("_", $table_info['table_name']);
+                $res[$explode[0]][] = $table_info;
+            } else {
+                $res['_'][] = $table_info;
+            }
+        }
+        return $res;
     }
 
     public function write_table_infos_to_file()
@@ -208,11 +218,6 @@ class GenDict
         $table_infos = $this->table_infos();
         $json = json_encode($table_infos, JSON_UNESCAPED_UNICODE);
         file_put_contents($filename, $json);
-    }
-
-    public function generate()
-    {
-        $this->write_table_infos_to_file();
     }
 
     /**
@@ -224,17 +229,22 @@ class GenDict
         $filename = $this->connect_config()['DB_NAME'] . '_schema.json';
         $json = file_get_contents($filename);
         $table_infos = json_decode($json);
-        $md = '### ' . $this->connect_config()['DB_NAME'] . '数据库字典';
-        foreach ($table_infos as $table_info) {
-            $md .= PHP_EOL . $this->table_header_md;
-            $table_row = sprintf('| %s | %s | %s | %s | %s |', $table_info->table_name, $table_info->table_comment, $table_info->table_collation, $table_info->engine, $table_info->create_time);
-            $md .= PHP_EOL . $table_row . PHP_EOL;
-            $md .= $this->column_header_md;
-            foreach ($table_info->column_infos as $column_info) {
-                $str = sprintf('| %s | %s | %s | %s | %s | %s |', $column_info->column_name, $column_info->column_type, $column_info->column_comment, $column_info->column_default, $column_info->extra, $column_info->is_nullable);
-                $md .= PHP_EOL . $str;
-            };
-            $md .= PHP_EOL . '*****';
+        $md = '## ' . $this->connect_config()['DB_NAME'] . '数据字典';
+        foreach ($table_infos as $group => $infos) {
+            $md .= PHP_EOL . '### ' . $group . '_';
+
+            foreach ($infos as $table_info) {
+                $md .= PHP_EOL . $this->table_header_md;
+                $table_row = sprintf('| %s | %s | %s | %s | %s |', $table_info->table_name, $table_info->table_comment, $table_info->table_collation, $table_info->engine, $table_info->create_time);
+                $md .= PHP_EOL . $table_row . PHP_EOL;
+                $md .= $this->column_header_md;
+                foreach ($table_info->column_infos as $column_info) {
+                    $str = sprintf('| %s | %s | %s | %s | %s | %s |', $column_info->column_name, $column_info->column_type, $column_info->column_comment, $column_info->column_default, $column_info->extra, $column_info->is_nullable);
+                    $md .= PHP_EOL . $str;
+                };
+                $md .= PHP_EOL . '*****';
+            }
+
         }
         $md_file_name = $this->connect_config()['DB_NAME'] . '.md';
         file_put_contents($md_file_name, $md);
