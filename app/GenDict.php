@@ -63,10 +63,10 @@ class GenDict
     public function connect_config(): array
     {
         return [
-            'HOST_NAME' => '114.115.232.151',
-            'DB_NAME' => 'base',
+            'HOST_NAME' => 'xxx',
+            'DB_NAME' => 'xxx',
             'USER' => 'root',
-            'PASSWORD' => 'TenPoint@246866',
+            'PASSWORD' => 'xxx',
             'CHARSET' => 'utf8mb4'
         ];
     }
