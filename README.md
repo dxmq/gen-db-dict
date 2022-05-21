@@ -1,28 +1,21 @@
 # gen-db-dict
 
 #### 介绍
-数据库字典生成工具
+数据库字典生成工具，目前支持生成markdown文档
 
 #### 软件架构
 php
 composer
 
+### 生成预览
+> 将markdown贴到语雀后的效果
+![](https://s3.bmp.ovh/imgs/2022/05/21/2ffb7f18d45567c7.png)
 
-#### 安装教程
+### 使用
+`git clone https://github.com/dxmq/gen-db-dict.git`
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+`cd gen-db-dict`
 
-#### 使用说明
+`php index.php`
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### 参与贡献
-
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+就会在当前目录生成数据字典markdown文档
