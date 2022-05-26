@@ -63,10 +63,10 @@ class GenDict
     public function connect_config(): array
     {
         return [
-            'HOST_NAME' => 'xxx',
+            'HOST_NAME' => 'localhost', // 例127.0.0.1
             'DB_NAME' => 'xxx',
             'USER' => 'root',
-            'PASSWORD' => 'xxx',
+            'PASSWORD' => 'root',
             'CHARSET' => 'utf8mb4'
         ];
     }
@@ -206,7 +206,7 @@ class GenDict
                 $explode = explode("_", $table_info['table_name']);
                 $res[$explode[0]][] = $table_info;
             } else {
-                $res['_'][] = $table_info;
+                $res['no_prefix'][] = $table_info;
             }
         }
         return $res;
@@ -234,6 +234,7 @@ class GenDict
             $md .= PHP_EOL . '### ' . $group . '_';
 
             foreach ($infos as $table_info) {
+                $md .= PHP_EOL . '#### ' . $table_info->table_name;
                 $md .= PHP_EOL . $this->table_header_md;
                 $table_row = sprintf('| %s | %s | %s | %s | %s |', $table_info->table_name, $table_info->table_comment, $table_info->table_collation, $table_info->engine, $table_info->create_time);
                 $md .= PHP_EOL . $table_row . PHP_EOL;
